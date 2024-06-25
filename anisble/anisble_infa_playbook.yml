@@ -1,11 +1,22 @@
-- name: Create a nginx server with site
+- name: Create a server
   hosts: localhost
   connection: local
   gather_facts: False
-  vars_files:
-    - group_vars/colman.env
   vars:
-      ansible_python_interpreter: /usr/bin/python3
+    aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY') }}"
+    aws_secret_key: "{{ lookup('env', 'AWS_SECRET_KEY') }}"
+    aws_account_id: "{{ lookup('env', 'AWS_ACCOUNT_ID') }}"
+    vpc_name: devops_final_vpc
+    network: 10.0.0.0/16
+    aws_region: eu-north-1
+    subnet_cidr: 10.0.1.0/24
+    subnet: eu-north-1a
+    aws_amazon_ami: ami-0705384c0b33c194c
+    Server_type: t3.micro
+    keypair: devops_final
+    server_volume_size: 20
+    server_name: devops_final_ec2
+    env: production
 
   tasks:
     - name: create VPC
@@ -13,6 +24,8 @@
         name: "{{ vpc_name }}"
         cidr_block: "{{ network }}"
         region: "{{ aws_region }}"
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
         state: present
         dns_hostnames: yes
         dns_support: yes
@@ -21,19 +34,13 @@
           Name: "{{ vpc_name }}"
       register: vpc
 
-    - name: Add VPC definition to vars file
-      lineinfile:
-        path: group_vars/colman.env
-        regexp: 'vpc_id: '
-        line: 'vpc_id: {{ vpc.vpc.id }}'
-        state: present
-        create: True
-
     - name: associate subnet to the VPC
       amazon.aws.ec2_vpc_subnet:
         state: present
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ aws_region }}"
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
         cidr: "{{ subnet_cidr }}"
         map_public: yes
         az: "{{ subnet }}"
@@ -42,41 +49,29 @@
         wait: yes
       register: subnet
 
-    - name: Add subnet definition to vars file
-      ansible.builtin.lineinfile:
-        path: group_vars/colman.env
-        regexp: 'subnet_id: '
-        line: 'subnet_id: {{ subnet.subnet.id }}'
-        state: present
-        create: True
-
     - name: create IGW
       amazon.aws.ec2_vpc_igw:
        vpc_id: "{{ vpc.vpc.id }}"
        region: "{{ aws_region }}"
+       aws_access_key: "{{ aws_access_key }}"
+       aws_secret_key: "{{ aws_secret_key }}"
        state: present
        tags:
          Name: "{{ vpc_name }}_igw"
       register: igw
 
-    - name: Add IGW definition to vars file
-      ansible.builtin.lineinfile:
-        path: group_vars/colman.env
-        regexp: 'igw_id: '
-        line: 'igw_id: {{ igw.gateway_id}}'
-        state: present
-        create: True
-
     - name: Route table for public Subnet
       amazon.aws.ec2_vpc_route_table:
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ aws_region }}"
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
         state: present
         subnets:
           - "{{ subnet.subnet.id }}"
         routes:
           - dest: 0.0.0.0/0
-            gateway_id: "{{ igw.gateway_id  }}"
+            gateway_id: "{{ igw.gateway_id }}"
         tags:
           Name: "{{ vpc_name }}_public_rt"
 
@@ -86,6 +81,8 @@
         description: "{{ vpc_name }} VPC SG"
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ aws_region }}"
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
         state: present
         rules:
           - proto: tcp
@@ -97,10 +94,12 @@
 
     - name: Create server
       amazon.aws.ec2_instance:
-        image_id: "{{ aws_centos_ami }}"
+        image_id: "{{ aws_amazon_ami }}"
         wait: yes
         instance_type: "{{ Server_type }}"
         region: "{{ aws_region }}"
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
         security_group: "{{ sg.group_id }}"
         vpc_subnet_id: "{{ subnet.subnet.id }}"
         key_name: "{{ keypair }}"
@@ -125,18 +124,12 @@
         filters:
           "tag:Name": "{{ server_name }}"
           instance-state-name: [ "running"]
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
       register: ec2_data
 
     - name: Add server public IP to application host group
       add_host: hostname={{ ec2_data.instances[0].public_ip_address }} groups=app
-
-    - name: Add Public IP definition to vars file
-      ansible.builtin.lineinfile:
-        path: group_vars/colman.env
-        regexp: 'server_id: '
-        line: 'server_id: {{ ec2_data.instances[0].instance_id }}'
-        state: present
-        create: True
 
     - name: Wait for SSH to start using external IP
       wait_for:
@@ -149,8 +142,7 @@
   user: ubuntu
   become: True
   gather_facts: True
-  vars_files:
-    - group_vars/colman.env
+  vars:
   tasks:
     - name: install base packages
       apt: 
