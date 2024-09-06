@@ -15,7 +15,7 @@
     server_type: "t3.micro"
     server_name: "stockpricetracker"
     docker_image: "linoyk/stock-price-tracker"
-    ansible_ssh_private_key_file: ~/.ssh/amir_niv_pk.pem  # Use the private key from GitHub Secrets
+    ansible_ssh_private_key_file: ~/.ssh/id_rsa.pem  # Use the private key from GitHub Secrets
 
   tasks:
     - name: Create VPC
@@ -108,7 +108,7 @@
         ansible_host: "{{ ec2_instance.instances[0].public_ip_address }}"
         ansible_connection: ssh
         ansible_ssh_user: ubuntu
-        ansible_ssh_private_key_file: ~/.ssh/amir_niv_pk.pem
+        ansible_ssh_private_key_file: ~/.ssh/id_rsa.pem
 
     - name: Pull Docker image from Docker Hub and run it
       ansible.builtin.shell: |
@@ -118,7 +118,7 @@
         ansible_host: "{{ ec2_instance.instances[0].public_ip_address }}"
         ansible_connection: ssh
         ansible_ssh_user: ubuntu
-        ansible_ssh_private_key_file: ~/.ssh/amir_niv_pk.pem
+        ansible_ssh_private_key_file: ~/.ssh/id_rsa.pem
 
     - name: Output instance public IP
       debug:
