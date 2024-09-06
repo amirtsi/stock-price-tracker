@@ -59,7 +59,7 @@
           - "{{ subnet.subnet.id }}"
         routes:
           - dest: 0.0.0.0/0
-            gateway_id: "{{ igw.igw.id }}"
+            gateway_id: "{{ igw.gateway_id  }}"
         tags:
           Name: "{{ vpc_name }}_public_rt"
 
