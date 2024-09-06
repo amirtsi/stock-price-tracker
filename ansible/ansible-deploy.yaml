@@ -50,7 +50,6 @@
         wait: yes
         exact_count: 1
         state: running
-        assign_public_ip: yes
       register: ec2_instance
 
     - name: Output instance public IP
