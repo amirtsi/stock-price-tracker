@@ -40,11 +40,11 @@ jobs:
 
       # Step 7: Build Docker image
       - name: Build Docker image
-        run: docker build -t your-dockerhub-username/your-app-name .
+        run: docker build -t linoyk/stock-price-tracker .
 
       # Step 8: Push Docker image to DockerHub
       - name: Push Docker image
-        run: docker push your-dockerhub-username/your-app-name
+        run: docker push linoyk/stock-price-tracker
 
       # Step 9: Deploy the application using Docker Compose
       - name: Deploy with Docker Compose
