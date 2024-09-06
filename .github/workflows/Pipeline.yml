@@ -64,10 +64,16 @@ jobs:
         run: |
           ansible-galaxy collection install amazon.aws
           ansible-galaxy collection install community.aws
-          # Verify installation
-          ansible-galaxy collection list
 
-      # Step 12: Run Ansible Playbook to Provision EC2 Instance and Pull Docker Image
+      # Step 12: Add the SSH private key for EC2 connection
+      - name: Add SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+        shell: bash
+
+      # Step 13: Run Ansible Playbook to Provision EC2 Instance and Pull Docker Image
       - name: Run Ansible Playbook
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
