@@ -50,29 +50,19 @@
         wait: yes
       register: subnet
 
-    - name: Create Route Table
-      amazon.aws.ec2_vpc_route_table:
-        vpc_id: "{{ vpc.vpc.id }}"
-        region: "{{ aws_region }}"
-        state: present
-        tags:
-          Name: "Route Table for {{ vpc_name }}"
-      register: route_table
+   - name: Route table for public Subnet
+	amazon.aws.ec2_vpc_route_table:
+  	vpc_id: "{{ vpc.vpc.id }}"
+  	region: "{{ aws_region }}"
+  	state: present
+  	subnets:
+    		- "{{ subnet.subnet.id }}"
+  	routes:
+    		- dest: 0.0.0.0/0
+      	gateway_id: "{{ igw.gateway_id  }}"
+  	tags:
+    		Name: "{{ vpc_name }}_public_rt"
 
-    - name: Associate Subnet with Route Table
-      amazon.aws.ec2_vpc_route_table_association:
-        subnet_id: "{{ subnet.subnet.id }}"
-        route_table_id: "{{ route_table.route_table.id }}"
-        region: "{{ aws_region }}"
-        state: present
-
-    - name: Create Route to IGW in Route Table
-      amazon.aws.ec2_vpc_route:
-        route_table_id: "{{ route_table.route_table.id }}"
-        destination_cidr_block: "0.0.0.0/0"
-        gateway_id: "{{ igw.igw.id }}"
-        region: "{{ aws_region }}"
-        state: present
 
     - name: Create EC2 instance
       amazon.aws.ec2_instance:
