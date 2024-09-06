@@ -13,8 +13,11 @@
     keypair: "amir_niv_pk"
     aws_centos_ami: "ami-04cdc91e49cb06165"
     server_type: "t3.micro"
-    docker_image: "linoyk/stock-price-tracker"
+    server_volume_size: 20
     server_name: "stockpricetracker"
+    env: "dev"
+    docker_image: "linoyk/stock-price-tracker"
+    iam_role: "EC2SSMRole"
 
   tasks:
     - name: Create VPC
@@ -40,13 +43,14 @@
         wait: yes
       register: subnet
 
-    - name: Create EC2 instance
+    - name: Create EC2 instance with IAM Role for SSM
       amazon.aws.ec2_instance:
         image_id: "{{ aws_centos_ami }}"
         instance_type: "{{ server_type }}"
         key_name: "{{ keypair }}"
         region: "{{ aws_region }}"
         vpc_subnet_id: "{{ subnet.subnet.id }}"
+        iam_instance_profile_name: "{{ iam_role }}"
         wait: yes
         exact_count: 1
         state: running
@@ -71,24 +75,30 @@
         tags:
           Name: default-sg
 
-    - name: Install Docker on EC2 instance
-      amazon.aws.ec2_command:
-        instance_ids: "{{ ec2_instance.instances[0].id }}"
+    - name: Install Docker on EC2 instance via SSM
+      amazon.aws.ssm:
         region: "{{ aws_region }}"
-        commands:
-          - sudo yum update -y
-          - sudo amazon-linux-extras install docker -y
-          - sudo systemctl start docker
-          - sudo systemctl enable docker
-          - sudo usermod -aG docker ec2-user
+        instance_ids: "{{ ec2_instance.instances[0].id }}"
+        document_name: "AWS-RunShellScript"
+        parameters:
+          commands:
+            - sudo yum update -y
+            - sudo amazon-linux-extras install docker -y
+            - sudo systemctl start docker
+            - sudo systemctl enable docker
+            - sudo usermod -aG docker ec2-user
+        timeout_seconds: 600
 
-    - name: Pull Docker image on EC2
-      amazon.aws.ec2_command:
-        instance_ids: "{{ ec2_instance.instances[0].id }}"
+    - name: Pull Docker image and run container on EC2 via SSM
+      amazon.aws.ssm:
         region: "{{ aws_region }}"
-        commands:
-          - sudo docker pull "{{ docker_image }}"
-          - sudo docker run -d -p 80:80 "{{ docker_image }}"
+        instance_ids: "{{ ec2_instance.instances[0].id }}"
+        document_name: "AWS-RunShellScript"
+        parameters:
+          commands:
+            - sudo docker pull "{{ docker_image }}"
+            - sudo docker run -d -p 80:80 "{{ docker_image }}"
+        timeout_seconds: 600
 
     - name: Output instance public IP
       debug:
