@@ -32,9 +32,16 @@ jobs:
         run: |
           ansible-galaxy collection install amazon.aws
 
+      # Print working directory for debugging
+      - name: Print working directory
+        run: pwd
+
+      - name: List files in current directory
+        run: ls -R
+
       - name: Run Ansible Playbook
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          ansible-playbook ansible/ansible-deploy.yml
+          ansible-playbook ./ansible/ansible-deploy.yml
