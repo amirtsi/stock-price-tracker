@@ -30,6 +30,15 @@
           Name: "{{ vpc_name }}"
       register: vpc
 
+    - name: Create Internet Gateway (IGW)
+      amazon.aws.ec2_vpc_igw:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ aws_region }}"
+        state: present
+        tags:
+          Name: "IGW for {{ vpc_name }}"
+      register: igw
+
     - name: Create Subnet
       amazon.aws.ec2_vpc_subnet:
         vpc_id: "{{ vpc.vpc.id }}"
@@ -40,6 +49,30 @@
         state: present
         wait: yes
       register: subnet
+
+    - name: Create Route Table
+      amazon.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ aws_region }}"
+        state: present
+        tags:
+          Name: "Route Table for {{ vpc_name }}"
+      register: route_table
+
+    - name: Associate Subnet with Route Table
+      amazon.aws.ec2_vpc_route_table_association:
+        subnet_id: "{{ subnet.subnet.id }}"
+        route_table_id: "{{ route_table.route_table.id }}"
+        region: "{{ aws_region }}"
+        state: present
+
+    - name: Create Route to IGW in Route Table
+      amazon.aws.ec2_vpc_route:
+        route_table_id: "{{ route_table.route_table.id }}"
+        destination_cidr_block: "0.0.0.0/0"
+        gateway_id: "{{ igw.igw.id }}"
+        region: "{{ aws_region }}"
+        state: present
 
     - name: Create EC2 instance
       amazon.aws.ec2_instance:
@@ -74,10 +107,8 @@
 
     - name: Wait for SSH to become available
       wait_for:
-        port: 22
         host: "{{ ec2_instance.instances[0].public_ip_address }}"
-        search_regex: OpenSSH
-        delay: 30
+        port: 22
         timeout: 300
 
     - name: Install Docker on EC2 instance via SSH
