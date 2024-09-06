@@ -1,0 +1,58 @@
+---
+- name: Deploy Infrastructure with Ansible
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    vpc_name: "free-tier-vpc"
+    network: "10.0.0.0/16"
+    aws_region: "eu-north-1"
+    subnet_cidr: "10.0.1.0/24"
+    subnet: "eu-north-1a"
+    keypair: "amir_niv_pk"
+    aws_centos_ami: "ami-0525491f47e947077"
+    Server_type: "t2.micro"
+    server_volume_size: 20
+    server_name: "stockpricetracker"
+    env: "dev"
+
+  tasks:
+    - name: Create VPC
+      amazon.aws.ec2_vpc_net:
+        name: "{{ vpc_name }}"
+        cidr_block: "{{ network }}"
+        region: "{{ aws_region }}"
+        state: present
+        dns_hostnames: yes
+        dns_support: yes
+        tags:
+          Name: "{{ vpc_name }}"
+      register: vpc
+
+    - name: Create Subnet
+      amazon.aws.ec2_vpc_subnet:
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ subnet_cidr }}"
+        region: "{{ aws_region }}"
+        az: "{{ subnet }}"
+        map_public: yes
+        state: present
+        wait: yes
+      register: subnet
+
+    - name: Create EC2 instance
+      amazon.aws.ec2_instance:
+        image_id: "{{ aws_centos_ami }}"
+        instance_type: "{{ Server_type }}"
+        key_name: "{{ keypair }}"
+        region: "{{ aws_region }}"
+        vpc_subnet_id: "{{ subnet.subnet.id }}"
+        wait: yes
+        exact_count: 1
+        state: running
+        assign_public_ip: yes
+      register: ec2_instance
+
+    - name: Output instance public IP
+      debug:
+        msg: "Instance public IP: {{ ec2_instance.instances[0].public_ip_address }}"

@@ -1,0 +1,32 @@
+name: Ansible Deploy
+
+on:
+  push:
+    branches:
+      - main  # The branch on which you want the workflow to trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Ansible and AWS dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible boto3 amazon.aws
+
+      - name: Run Ansible Playbook
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          ansible-galaxy collection install amazon.aws
+          ansible-playbook playbooks/deploy.yml
