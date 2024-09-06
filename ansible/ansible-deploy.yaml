@@ -44,7 +44,7 @@
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ aws_region }}"
         igw_id: "{{ igw.gateway_id }}"
-        state: attached
+        state: present
 
     - name: Create Subnet
       amazon.aws.ec2_vpc_subnet:
