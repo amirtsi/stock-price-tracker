@@ -1,5 +1,5 @@
 ---
-- name: Deploy Infrastructure and Application with Ansible
+- name: Deploy Infrastructure with Ansible
   hosts: localhost
   connection: local
   gather_facts: False
@@ -13,7 +13,6 @@
     keypair: "amir_niv_pk"
     aws_centos_ami: "ami-04cdc91e49cb06165"
     server_type: "t3.micro"
-    docker_image: "linoyk/stock-price-tracker"
     server_name: "stockpricetracker"
 
   tasks:
@@ -70,47 +69,6 @@
             cidr_ip: 0.0.0.0/0
         tags:
           Name: default-sg
-
-    - name: Install Docker on EC2 instance via AWS SSM
-      amazon.aws.ssm_send_command:
-        instance_ids:
-          - "{{ ec2_instance.instance_ids[0] }}"
-        document_name: "AWS-RunShellScript"
-        comment: "Install Docker"
-        parameters:
-          commands:
-            - "sudo yum update -y"
-            - "sudo amazon-linux-extras install docker -y"
-            - "sudo systemctl start docker"
-            - "sudo systemctl enable docker"
-            - "sudo usermod -aG docker ec2-user"
-        region: "{{ aws_region }}"
-      register: ssm_result
-
-    - name: Wait for SSM command to complete
-      amazon.aws.ssm_command_wait:
-        command_id: "{{ ssm_result.command.command_id }}"
-        instance_id: "{{ ec2_instance.instance_ids[0] }}"
-        region: "{{ aws_region }}"
-
-    - name: Pull Docker image on EC2 via AWS SSM
-      amazon.aws.ssm_send_command:
-        instance_ids:
-          - "{{ ec2_instance.instance_ids[0] }}"
-        document_name: "AWS-RunShellScript"
-        comment: "Pull Docker Image and Run"
-        parameters:
-          commands:
-            - "sudo docker pull {{ docker_image }}"
-            - "sudo docker run -d -p 80:80 {{ docker_image }}"
-        region: "{{ aws_region }}"
-      register: ssm_result_docker
-
-    - name: Wait for Docker image pull and run to complete
-      amazon.aws.ssm_command_wait:
-        command_id: "{{ ssm_result_docker.command.command_id }}"
-        instance_id: "{{ ec2_instance.instance_ids[0] }}"
-        region: "{{ aws_region }}"
 
     - name: Output instance public IP
       debug:
