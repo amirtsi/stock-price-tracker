@@ -1,22 +1,22 @@
-name: CI/CD Pipeline for React App
+# .github/workflows/ci-cd-ansible.yml
 
-# Trigger the workflow on push to the main branch
+name: CI/CD Pipeline for React App and Ansible Deploy
+
 on:
   push:
     branches:
-      - main
+      - main  # Trigger on push to the main branch
 
 jobs:
-  build:
-    # Use the latest Ubuntu environment
+  build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Check out the code from the GitHub repository
+      # Step 1: Check out the code from the repository
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # Step 2: Set up Node.js environment
+      # Step 2: Set up Node.js environment for building the React app
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
@@ -26,34 +26,41 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Step 4: Run unit tests
-      - name: Run tests
+      # Step 4: Run tests
+      - name: Run unit tests
         run: npm test
 
-      # Step 5: Set up Docker
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      # Step 6: Log in to DockerHub using GitHub secrets
-      - name: Log in to DockerHub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-      # Step 7: Build Docker image
+      # Step 5: Build Docker image
       - name: Build Docker image
         run: docker build -t linoyk/stock-price-tracker .
 
-      # Step 8: Push Docker image to DockerHub
-      - name: Push Docker image
+      # Step 6: Log in to DockerHub using secrets
+      - name: Log in to DockerHub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      # Step 7: Push Docker image to DockerHub
+      - name: Push Docker image to DockerHub
         run: docker push linoyk/stock-price-tracker
 
-      # Step 9: Install Docker Compose
-      - name: Install Docker Compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install docker-compose -y
+      # Step 8: Set up Python environment for Ansible
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
 
-      # Step 10: Deploy the application using Docker Compose
-      - name: Deploy with Docker Compose
+      # Step 9: Install Ansible and dependencies
+      - name: Install Ansible and Boto3
         run: |
-          docker-compose down
-          docker-compose up -d
+          python -m pip install --upgrade pip
+          pip install ansible boto3
+
+      # Step 10: Install AWS Ansible Collection
+      - name: Install AWS Ansible Collection
+        run: ansible-galaxy collection install amazon.aws
+
+      # Step 11: Run Ansible Playbook to Provision EC2 Instance and Pull Docker Image
+      - name: Run Ansible Playbook
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: ansible-playbook ./ansible/ansible-deploy.yaml -i localhost, -vvv
