@@ -59,11 +59,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible boto3
 
-      # Step 11: Install AWS Ansible Collection
+      # Step 11: Install AWS and community Ansible Collections
       - name: Install AWS Ansible Collection
         run: |
           ansible-galaxy collection install amazon.aws
           ansible-galaxy collection install community.aws
+          # Verify installation
+          ansible-galaxy collection list
 
       # Step 12: Run Ansible Playbook to Provision EC2 Instance and Pull Docker Image
       - name: Run Ansible Playbook
