@@ -52,6 +52,25 @@
         state: running
       register: ec2_instance
 
+    - name: Allow SSH and HTTP in security group
+      amazon.aws.ec2_security_group:
+        name: default
+        description: Allow SSH and HTTP
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ aws_region }}"
+        state: present
+        rules:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+        tags:
+          Name: default-sg
+
     - name: Output instance public IP
       debug:
         msg: "Instance public IP: {{ ec2_instance.instances[0].public_ip_address }}"
