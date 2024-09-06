@@ -32,12 +32,17 @@ jobs:
         run: |
           ansible-galaxy collection install amazon.aws
 
-      # Print working directory for debugging
+      # Debugging - Print working directory
       - name: Print working directory
         run: pwd
 
+      # Debugging - List all files and directories
       - name: List files in current directory
-        run: ls -R
+        run: ls -la
+
+      # Debugging - List files in ansible directory
+      - name: List files in ansible directory
+        run: ls -la ./ansible
 
       - name: Run Ansible Playbook
         env:
