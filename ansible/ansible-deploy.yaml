@@ -1,5 +1,5 @@
 ---
-- name: Deploy Infrastructure and Install Docker via SSM
+- name: Deploy Infrastructure and Install Docker via SSH
   hosts: localhost
   connection: local
   gather_facts: False
@@ -14,8 +14,7 @@
     aws_centos_ami: "ami-04cdc91e49cb06165"
     server_type: "t3.micro"
     server_name: "stockpricetracker"
-    ansible_connection: aws_ssm
-    ansible_aws_ssm_region: "{{ aws_region }}"
+    ansible_ssh_private_key_file: ~/.ssh/id_rsa  # Use the private key added in GitHub actions
 
   tasks:
     - name: Create VPC
@@ -76,17 +75,17 @@
       wait_for_connection:
         timeout: 300
 
-    - name: Install Docker on EC2 instance via SSM
-      raw: |
+    - name: Install Docker on EC2 instance via SSH
+      ansible.builtin.shell: |
         sudo yum update -y
         sudo amazon-linux-extras install docker -y
         sudo systemctl start docker
         sudo systemctl enable docker
         sudo usermod -aG docker ec2-user
       vars:
-        ansible_connection: aws_ssm
-        ansible_aws_ssm_region: "{{ aws_region }}"
-      register: ssm_command
+        ansible_connection: ssh
+        ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      register: ssh_command
 
     - name: Output instance public IP
       debug:
