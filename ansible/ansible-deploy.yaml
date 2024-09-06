@@ -71,27 +71,45 @@
         tags:
           Name: default-sg
 
-    - name: Install Docker on EC2 instance using AWS SSM
-      ansible.builtin.shell:
-        cmd: |
-          sudo yum update -y
-          sudo amazon-linux-extras install docker -y
-          sudo systemctl start docker
-          sudo systemctl enable docker
-          sudo usermod -aG docker ec2-user
-      connection: aws_ssm
-      args:
-        instance_ids: "{{ ec2_instance.instance_ids }}"
+    - name: Install Docker on EC2 instance via AWS SSM
+      amazon.aws.ssm_send_command:
+        instance_ids:
+          - "{{ ec2_instance.instance_ids[0] }}"
+        document_name: "AWS-RunShellScript"
+        comment: "Install Docker"
+        parameters:
+          commands:
+            - "sudo yum update -y"
+            - "sudo amazon-linux-extras install docker -y"
+            - "sudo systemctl start docker"
+            - "sudo systemctl enable docker"
+            - "sudo usermod -aG docker ec2-user"
+        region: "{{ aws_region }}"
+      register: ssm_result
+
+    - name: Wait for SSM command to complete
+      amazon.aws.ssm_command_wait:
+        command_id: "{{ ssm_result.command.command_id }}"
+        instance_id: "{{ ec2_instance.instance_ids[0] }}"
         region: "{{ aws_region }}"
 
-    - name: Pull Docker image on EC2 using AWS SSM
-      ansible.builtin.shell:
-        cmd: |
-          sudo docker pull "{{ docker_image }}"
-          sudo docker run -d -p 80:80 "{{ docker_image }}"
-      connection: aws_ssm
-      args:
-        instance_ids: "{{ ec2_instance.instance_ids }}"
+    - name: Pull Docker image on EC2 via AWS SSM
+      amazon.aws.ssm_send_command:
+        instance_ids:
+          - "{{ ec2_instance.instance_ids[0] }}"
+        document_name: "AWS-RunShellScript"
+        comment: "Pull Docker Image and Run"
+        parameters:
+          commands:
+            - "sudo docker pull {{ docker_image }}"
+            - "sudo docker run -d -p 80:80 {{ docker_image }}"
+        region: "{{ aws_region }}"
+      register: ssm_result_docker
+
+    - name: Wait for Docker image pull and run to complete
+      amazon.aws.ssm_command_wait:
+        command_id: "{{ ssm_result_docker.command.command_id }}"
+        instance_id: "{{ ec2_instance.instance_ids[0] }}"
         region: "{{ aws_region }}"
 
     - name: Output instance public IP
