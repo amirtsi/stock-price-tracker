@@ -11,27 +11,30 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3  # Automatically will use Node.js 20 in the future
+        uses: actions/checkout@v3
 
       - name: Set up Python environment
-        uses: actions/setup-python@v4  # Automatically will use Node.js 20 in the future
+        uses: actions/setup-python@v4
         with:
           python-version: '3.x'
 
       - name: Install Node.js (explicitly use Node.js 20)
-        uses: actions/setup-node@v3  # Ensure Node.js 20 is being used
+        uses: actions/setup-node@v3
         with:
           node-version: '20'
 
-      - name: Install Ansible and AWS dependencies
+      - name: Install Ansible and Boto3 dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ansible boto3 amazon.aws
+          pip install ansible boto3
+
+      - name: Install Amazon AWS Ansible Collection
+        run: |
+          ansible-galaxy collection install amazon.aws
 
       - name: Run Ansible Playbook
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          ansible-galaxy collection install amazon.aws
           ansible-playbook playbooks/deploy.yml
