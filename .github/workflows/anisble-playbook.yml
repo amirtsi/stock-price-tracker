@@ -3,7 +3,7 @@ name: Ansible Deploy
 on:
   push:
     branches:
-      - main  # The branch on which you want the workflow to trigger
+      - main  # Trigger the workflow on push to main
 
 jobs:
   deploy:
@@ -11,12 +11,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3  # Automatically will use Node.js 20 in the future
 
       - name: Set up Python environment
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v4  # Automatically will use Node.js 20 in the future
         with:
           python-version: '3.x'
+
+      - name: Install Node.js (explicitly use Node.js 20)
+        uses: actions/setup-node@v3  # Ensure Node.js 20 is being used
+        with:
+          node-version: '20'
 
       - name: Install Ansible and AWS dependencies
         run: |
