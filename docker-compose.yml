@@ -9,6 +9,5 @@ services:
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
-  environment:
-    - NODE_ENV=production
-
+    environment:
+      NODE_ENV: production
