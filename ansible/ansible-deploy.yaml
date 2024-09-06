@@ -71,34 +71,28 @@
         tags:
           Name: default-sg
 
-    - name: Wait for EC2 instance to become available
-      amazon.aws.ec2_instance_info:
+    - name: Install Docker on EC2 instance using AWS SSM
+      ansible.builtin.shell:
+        cmd: |
+          sudo yum update -y
+          sudo amazon-linux-extras install docker -y
+          sudo systemctl start docker
+          sudo systemctl enable docker
+          sudo usermod -aG docker ec2-user
+      connection: aws_ssm
+      args:
         instance_ids: "{{ ec2_instance.instance_ids }}"
         region: "{{ aws_region }}"
-      register: ec2_info
 
-    - name: Install Docker on EC2 instance via SSM
-      amazon.aws.ssm:
-        region: "{{ aws_region }}"
+    - name: Pull Docker image on EC2 using AWS SSM
+      ansible.builtin.shell:
+        cmd: |
+          sudo docker pull "{{ docker_image }}"
+          sudo docker run -d -p 80:80 "{{ docker_image }}"
+      connection: aws_ssm
+      args:
         instance_ids: "{{ ec2_instance.instance_ids }}"
-        document_name: "AWS-RunShellScript"
-        parameters:
-          commands:
-            - sudo yum update -y
-            - sudo amazon-linux-extras install docker -y
-            - sudo systemctl start docker
-            - sudo systemctl enable docker
-            - sudo usermod -aG docker ec2-user
-
-    - name: Pull Docker image on EC2
-      amazon.aws.ssm:
         region: "{{ aws_region }}"
-        instance_ids: "{{ ec2_instance.instance_ids }}"
-        document_name: "AWS-RunShellScript"
-        parameters:
-          commands:
-            - sudo docker pull "{{ docker_image }}"
-            - sudo docker run -d -p 80:80 "{{ docker_image }}"
 
     - name: Output instance public IP
       debug:
