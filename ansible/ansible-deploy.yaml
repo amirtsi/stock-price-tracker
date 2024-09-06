@@ -50,19 +50,18 @@
         wait: yes
       register: subnet
 
-   - name: Route table for public Subnet
-	amazon.aws.ec2_vpc_route_table:
-  	vpc_id: "{{ vpc.vpc.id }}"
-  	region: "{{ aws_region }}"
-  	state: present
-  	subnets:
-    		- "{{ subnet.subnet.id }}"
-  	routes:
-    		- dest: 0.0.0.0/0
-      	gateway_id: "{{ igw.gateway_id  }}"
-  	tags:
-    		Name: "{{ vpc_name }}_public_rt"
-
+    - name: Route table for public Subnet
+      amazon.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ aws_region }}"
+        state: present
+        subnets:
+          - "{{ subnet.subnet.id }}"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: "{{ igw.igw.id }}"
+        tags:
+          Name: "{{ vpc_name }}_public_rt"
 
     - name: Create EC2 instance
       amazon.aws.ec2_instance:
