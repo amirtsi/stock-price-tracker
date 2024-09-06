@@ -13,11 +13,8 @@
     keypair: "amir_niv_pk"
     aws_centos_ami: "ami-04cdc91e49cb06165"
     server_type: "t3.micro"
-    server_volume_size: 20
-    server_name: "stockpricetracker"
-    env: "dev"
     docker_image: "linoyk/stock-price-tracker"
-    iam_role: "EC2SSMRole"
+    server_name: "stockpricetracker"
 
   tasks:
     - name: Create VPC
@@ -43,14 +40,13 @@
         wait: yes
       register: subnet
 
-    - name: Create EC2 instance with IAM Role for SSM
+    - name: Create EC2 instance
       amazon.aws.ec2_instance:
         image_id: "{{ aws_centos_ami }}"
         instance_type: "{{ server_type }}"
         key_name: "{{ keypair }}"
         region: "{{ aws_region }}"
         vpc_subnet_id: "{{ subnet.subnet.id }}"
-        iam_instance_profile_name: "{{ iam_role }}"
         wait: yes
         exact_count: 1
         state: running
@@ -87,9 +83,9 @@
             - sudo systemctl start docker
             - sudo systemctl enable docker
             - sudo usermod -aG docker ec2-user
-        timeout_seconds: 600
+      register: result
 
-    - name: Pull Docker image and run container on EC2 via SSM
+    - name: Pull Docker image on EC2
       amazon.aws.ssm:
         region: "{{ aws_region }}"
         instance_ids: "{{ ec2_instance.instances[0].id }}"
@@ -98,7 +94,6 @@
           commands:
             - sudo docker pull "{{ docker_image }}"
             - sudo docker run -d -p 80:80 "{{ docker_image }}"
-        timeout_seconds: 600
 
     - name: Output instance public IP
       debug:
