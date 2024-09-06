@@ -3,7 +3,7 @@ name: Ansible Deploy
 on:
   push:
     branches:
-      - main  # Trigger the workflow on push to main
+      - main
 
 jobs:
   deploy:
@@ -32,21 +32,9 @@ jobs:
         run: |
           ansible-galaxy collection install amazon.aws
 
-      # Debugging - Print working directory
-      - name: Print working directory
-        run: pwd
-
-      # Debugging - List all files and directories
-      - name: List files in current directory
-        run: ls -la
-
-      # Debugging - List files in ansible directory
-      - name: List files in ansible directory
-        run: ls -la ./ansible
-
-      - name: Run Ansible Playbook
+      - name: Run Ansible Playbook with verbose logging
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          ansible-playbook ./ansible/ansible-deploy.yaml  # Updated file extension
+          ansible-playbook ./ansible/ansible-deploy.yaml -i localhost, -vvv
