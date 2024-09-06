@@ -40,26 +40,6 @@
         wait: yes
       register: subnet
 
-    - name: Create Internet Gateway
-      amazon.aws.ec2_vpc_igw:
-        vpc_id: "{{ vpc.vpc.id }}"
-        region: "{{ aws_region }}"
-        state: present
-      register: igw
-
-    - name: Attach Internet Gateway to VPC
-      amazon.aws.ec2_vpc_route_table:
-        vpc_id: "{{ vpc.vpc.id }}"
-        region: "{{ aws_region }}"
-        state: present
-        subnets:
-          - "{{ subnet.subnet.id }}"
-        routes:
-          - dest: 0.0.0.0/0
-            gateway_id: "{{ igw.gateway_id }}"
-        tags:
-          Name: "{{ vpc_name }}_public_rt"
-
     - name: Create EC2 instance
       amazon.aws.ec2_instance:
         image_id: "{{ aws_centos_ami }}"
@@ -106,15 +86,6 @@
         ansible_connection: aws_ssm
         ansible_aws_ssm_region: "{{ aws_region }}"
       register: ssm_command
-
-    - name: Pull and run Docker image
-      raw: |
-        sudo docker pull linoyk/stock-price-tracker
-        sudo docker run -d -p 80:80 linoyk/stock-price-tracker
-      vars:
-        ansible_connection: aws_ssm
-        ansible_aws_ssm_region: "{{ aws_region }}"
-      register: docker_command
 
     - name: Output instance public IP
       debug:
