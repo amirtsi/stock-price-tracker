@@ -15,10 +15,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Download Docker Image Tag
-        uses: actions/download-artifact@v3  # Updated to v3
+      - name: Upload Docker Image Info for Deployment
+        uses: actions/upload-artifact@v3
         with:
           name: docker-image-tag
+          path: linoyk/stock-price-tracker
+
 
       - name: Set up Python
         uses: actions/setup-python@v2
