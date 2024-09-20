@@ -2,7 +2,7 @@ name: deploy my app to cloud
 
 on:
   push:
-    branches: [ deployment ]
+    branches: [ main ]
 
 jobs:
   deploy:
