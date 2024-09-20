@@ -5,9 +5,6 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
-    volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
+      - "80:80"  # Map port 80 of the container to port 80 of the host
     environment:
-      NODE_ENV: production
+      NODE_ENV: production  # Set the environment to production
