@@ -67,7 +67,7 @@
           Name: "{{ vpc_name }}_public_rt"
 
     - name: Create security group
-      amazon.aws.ec2_security_group:
+      ec2_group:
         name: "{{ vpc_name }} VPC SG"
         description: "{{ vpc_name }} VPC SG"
         vpc_id: "{{ vpc.vpc.id }}"
@@ -76,8 +76,8 @@
         rules:
           - proto: tcp
             ports:
-              - 22
-              - 80
+            - 80
+            - 22
             cidr_ip: 0.0.0.0/0
       register: sg
 
