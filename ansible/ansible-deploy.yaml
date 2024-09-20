@@ -19,7 +19,6 @@
     server_volume_size: 20  # Define as needed
 
   tasks:
-    # VPC Creation
     - name: Create VPC
       amazon.aws.ec2_vpc_net:
         name: "{{ vpc_name }}"
@@ -32,7 +31,6 @@
           Name: "{{ vpc_name }}"
       register: vpc
 
-    # Subnet Creation
     - name: Create Subnet and associate with VPC
       amazon.aws.ec2_vpc_subnet:
         state: present
@@ -46,7 +44,6 @@
         wait: yes
       register: subnet
 
-    # Internet Gateway Creation
     - name: Create Internet Gateway (IGW)
       amazon.aws.ec2_vpc_igw:
         vpc_id: "{{ vpc.vpc.id }}"
@@ -56,7 +53,6 @@
           Name: "{{ vpc_name }}_igw"
       register: igw
 
-    # Route Table for Public Subnet
     - name: Create Route Table for Public Subnet
       amazon.aws.ec2_vpc_route_table:
         vpc_id: "{{ vpc.vpc.id }}"
@@ -70,7 +66,6 @@
         tags:
           Name: "{{ vpc_name }}_public_rt"
 
-    # Security Group Creation
     - name: Create Security Group for VPC
       amazon.aws.ec2_security_group:
         name: "{{ vpc_name }} VPC SG"
@@ -86,7 +81,6 @@
             cidr_ip: 0.0.0.0/0
       register: sg
 
-    # EC2 Instance Creation
     - name: Create EC2 instance
       amazon.aws.ec2_instance:
         image_id: "{{ aws_centos_ami }}"
@@ -110,59 +104,57 @@
           Name: "{{ server_name }}"
       register: ec2_instance
 
-    # Wait for SSH to Become Available
     - name: Wait for SSH to start on EC2 instance
       wait_for:
         host: "{{ ec2_instance.instances[0].public_ip_address }}"
         port: 22
         timeout: 300
 
-    # Pause to Ensure Ubuntu User Access
     - name: Pause for ubuntu user access after boot
       ansible.builtin.pause:
         seconds: 30
 
-    # Setup Application Server
-    - name: Setup app server
-      hosts: app
-      user: ubuntu
-      become: True
-      gather_facts: False
-      tasks:
-        # Add Docker GPG Key
-        - name: Add Docker GPG Key
-          ansible.builtin.shell: wget -qO - https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    - name: Add EC2 public IP to app host group
+      add_host:
+        name: "{{ ec2_instance.instances[0].public_ip_address }}"
+        groups: app
+        ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
 
-        # Add Docker Repository
-        - name: Add Docker Repository
-          apt_repository:
-            repo: deb https://download.docker.com/linux/ubuntu jammy stable
-            state: present
+- name: Setup Application on EC2 instance
+  hosts: app
+  user: ubuntu
+  become: True
+  gather_facts: False
 
-        # Install Docker
-        - name: Install Docker
-          apt:
-            name:
-              - docker-ce
-              - docker-ce-cli
-              - containerd.io
-              - docker-buildx-plugin
-              - docker-compose-plugin
-            state: latest
-            update_cache: true
+  tasks:
+    - name: Add Docker GPG Key
+      ansible.builtin.shell: wget -qO - https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
-        # Start Docker Service
-        - name: Start Docker service
-          ansible.builtin.service:
-            name: "docker"
-            enabled: true
-            state: started
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu jammy stable
+        state: present
 
-        # Pull Docker Image and Run Container with linoyk/stock-price-tracker
-        - name: Run Docker container for stock price tracker app
-          shell: "docker run -d -p 80:3000 -t --restart always --name stock-price-tracker {{ docker_image }}"
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: latest
+        update_cache: true
 
-    # Output EC2 Instance Public IP
+    - name: Start Docker service
+      ansible.builtin.service:
+        name: "docker"
+        enabled: true
+        state: started
+
+    - name: Run Docker container for stock price tracker app
+      shell: "docker run -d -p 80:3000 -t --restart always --name stock-price-tracker {{ docker_image }}"
+
     - name: Output instance public IP
       debug:
         msg: "Instance public IP: {{ ec2_instance.instances[0].public_ip_address }}"
