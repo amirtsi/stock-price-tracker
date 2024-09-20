@@ -1,5 +1,5 @@
 ---
-- name: Deploy Infrastructure and Setup Web Server with Nginx
+- name: Create a nginx server with stock-price-tracker
   hosts: localhost
   connection: local
   gather_facts: False
@@ -11,15 +11,15 @@
     subnet_cidr: "10.0.1.0/24"
     subnet: "eu-north-1a"
     keypair: "amir_niv_pk"
-    aws_centos_ami: "ami-04cdc91e49cb06165"
+    aws_ubuntu_ami: "ami-04cdc91e49cb06165"
     server_type: "t3.medium"
     server_name: "stockpricetracker"
     docker_image: "linoyk/stock-price-tracker"
     ansible_ssh_private_key_file: "~/.ssh/amir_niv_pk.pem"
-    server_volume_size: 20  # Define as needed
+    server_volume_size: 20
 
   tasks:
-    - name: Create VPC
+    - name: create VPC
       amazon.aws.ec2_vpc_net:
         name: "{{ vpc_name }}"
         cidr_block: "{{ network }}"
@@ -31,7 +31,7 @@
           Name: "{{ vpc_name }}"
       register: vpc
 
-    - name: Create Subnet and associate with VPC
+    - name: associate subnet to the VPC
       amazon.aws.ec2_vpc_subnet:
         state: present
         vpc_id: "{{ vpc.vpc.id }}"
@@ -44,7 +44,7 @@
         wait: yes
       register: subnet
 
-    - name: Create Internet Gateway (IGW)
+    - name: create IGW
       amazon.aws.ec2_vpc_igw:
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ aws_region }}"
@@ -53,7 +53,7 @@
           Name: "{{ vpc_name }}_igw"
       register: igw
 
-    - name: Create Route Table for Public Subnet
+    - name: Route table for public Subnet
       amazon.aws.ec2_vpc_route_table:
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ aws_region }}"
@@ -66,10 +66,10 @@
         tags:
           Name: "{{ vpc_name }}_public_rt"
 
-    - name: Create Security Group for VPC
+    - name: Create security group
       amazon.aws.ec2_security_group:
         name: "{{ vpc_name }} VPC SG"
-        description: "Security group for {{ vpc_name }}"
+        description: "{{ vpc_name }} VPC SG"
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ aws_region }}"
         state: present
@@ -83,30 +83,43 @@
 
     - name: Create EC2 instance
       amazon.aws.ec2_instance:
-        image_id: "{{ aws_centos_ami }}"
-        instance_type: "{{ server_type }}"
-        key_name: "{{ keypair }}"
-        region: "{{ aws_region }}"
-        vpc_subnet_id: "{{ subnet.subnet.id }}"
-        security_group: "{{ sg.group_id }}"
+        image_id: "{{ aws_ubuntu_ami }}"
         wait: yes
-        exact_count: 1
-        state: running
+        instance_type: "{{ server_type }}"
+        region: "{{ aws_region }}"
+        security_group: "{{ sg.group_id }}"
+        vpc_subnet_id: "{{ subnet.subnet.id }}"
+        key_name: "{{ keypair }}"
         volumes:
           - device_name: /dev/sda1
             ebs:
               volume_type: gp3
               volume_size: "{{ server_volume_size }}"
               delete_on_termination: true
-        network:
-          assign_public_ip: yes
         tags:
           Name: "{{ server_name }}"
-      register: ec2_instance
+        exact_count: 1
+        wait_timeout: 300
+        network:
+          assign_public_ip: yes
+        state: running
+      register: server_ec2
 
-    - name: Wait for SSH to start on EC2 instance
+    - name: get IP of instance
+      amazon.aws.ec2_instance_info:
+        filters:
+          "tag:Name": "{{ server_name }}"
+          instance-state-name: [ "running"]
+      register: ec2_data
+
+    - debug: var=ec2_data.instances[0].public_ip_address
+
+    - name: Add server public IP to application host group
+      add_host: hostname={{ ec2_data.instances[0].public_ip_address }} groups=app
+
+    - name: Wait for SSH to start using external IP
       wait_for:
-        host: "{{ ec2_instance.instances[0].public_ip_address }}"
+        host: "{{ ec2_data.instances[0].public_ip_address }}"
         port: 22
         timeout: 300
 
@@ -114,20 +127,17 @@
       ansible.builtin.pause:
         seconds: 30
 
-    - name: Add EC2 public IP to app host group
-      add_host:
-        name: "{{ ec2_instance.instances[0].public_ip_address }}"
-        groups: app
-        ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
-
-- name: Setup Application on EC2 instance
+##############################################################
+- name: Setup app server
   hosts: app
   user: ubuntu
   become: True
   gather_facts: False
+  vars:
+    docker_image: "linoyk/stock-price-tracker"
 
   tasks:
-    - name: Add Docker GPG Key
+    - name: add GPG key
       ansible.builtin.shell: wget -qO - https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
     - name: Add Docker Repository
@@ -146,15 +156,11 @@
         state: latest
         update_cache: true
 
-    - name: Start Docker service
+    - name: Start Docker
       ansible.builtin.service:
         name: "docker"
         enabled: true
         state: started
 
-    - name: Run Docker container for stock price tracker app
+    - name: Run stock-price-tracker docker
       shell: "docker run -d -p 80:3000 -t --restart always --name stock-price-tracker {{ docker_image }}"
-
-    - name: Output instance public IP
-      debug:
-        msg: "Instance public IP: {{ ec2_instance.instances[0].public_ip_address }}"
