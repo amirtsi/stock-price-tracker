@@ -1,5 +1,5 @@
 ---
-- name: Deploy Infrastructure and Install Docker via SSH
+- name: Deploy Infrastructure and Setup Web Server with Nginx
   hosts: localhost
   connection: local
   gather_facts: False
@@ -12,10 +12,11 @@
     subnet: "eu-north-1a"
     keypair: "amir_niv_pk"
     aws_centos_ami: "ami-04cdc91e49cb06165"
-    server_type: "t3.medium"  # Adjusted the instance type
+    server_type: "t3.medium"
     server_name: "stockpricetracker"
     docker_image: "linoyk/stock-price-tracker"
-    ansible_ssh_private_key_file: ~/.ssh/id_rsa.pem  # Use the private key from GitHub Secrets
+    ansible_ssh_private_key_file: "~/.ssh/id_rsa.pem"
+    server_volume_size: 20  # Define as needed
 
   tasks:
     - name: Create VPC
@@ -89,6 +90,8 @@
         wait: yes
         exact_count: 1
         state: running
+        network:
+          assign_public_ip: yes
       register: ec2_instance
 
     - name: Wait for SSH to become available
@@ -97,20 +100,22 @@
         port: 22
         timeout: 300
 
-    - name: Install Docker on EC2 instance via SSH
+    - name: Install Docker and Nginx on EC2 instance via SSH
       ansible.builtin.shell: |
         sudo yum update -y
         sudo amazon-linux-extras install docker -y
         sudo systemctl start docker
         sudo systemctl enable docker
-        sudo usermod -aG docker ubuntu
+        sudo yum install nginx -y
+        sudo systemctl start nginx
+        sudo systemctl enable nginx
       vars:
         ansible_host: "{{ ec2_instance.instances[0].public_ip_address }}"
         ansible_connection: ssh
         ansible_ssh_user: ubuntu
-        ansible_ssh_private_key_file: ~/.ssh/id_rsa.pem
+        ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
 
-    - name: Pull Docker image from Docker Hub and run it
+    - name: Pull and Run Docker Image
       ansible.builtin.shell: |
         sudo docker pull {{ docker_image }}
         sudo docker run -d -p 80:80 {{ docker_image }}
@@ -118,7 +123,7 @@
         ansible_host: "{{ ec2_instance.instances[0].public_ip_address }}"
         ansible_connection: ssh
         ansible_ssh_user: ubuntu
-        ansible_ssh_private_key_file: ~/.ssh/id_rsa.pem
+        ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
 
     - name: Output instance public IP
       debug:
