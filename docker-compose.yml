@@ -3,17 +3,7 @@ services:
   react-app:
     build:
       context: .
-      dockerfile: Dockerfile.react
-    expose:
-      - "3000"
-    environment:
-      - NODE_ENV=production
-
-  nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
     ports:
       - "80:80"
-    depends_on:
-      - react-app
+    environment:
+      - NODE_ENV=production
