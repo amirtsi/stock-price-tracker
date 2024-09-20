@@ -46,3 +46,10 @@ jobs:
       # Step 8: Push Docker image to DockerHub
       - name: Push Docker image
         run: docker push linoyk/stock-price-tracker
+
+      # Step 9: Upload Docker Image Info for Deployment Workflow
+      - name: Upload Image Tag for Deployment
+        uses: actions/upload-artifact@v2
+        with:
+          name: docker-image-tag
+          path: linoyk/stock-price-tracker
