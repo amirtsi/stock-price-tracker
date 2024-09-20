@@ -163,4 +163,4 @@
         state: started
 
     - name: Run stock-price-tracker docker
-      shell: "docker run -d -p 80:5000 -t --restart always --name stock-price-tracker {{ docker_image }}"
+      shell: "docker run -d -p 80:80 -t --restart always --name stock-price-tracker {{ docker_image }}"
