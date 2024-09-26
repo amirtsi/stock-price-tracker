@@ -111,11 +111,6 @@
           instance-state-name: [ "running" ]
       register: ec2_data
 
-    - name: Save public IP to a file
-      copy:
-        content: "{{ ec2_data.instances[0].public_ip_address }}"
-        dest: ./public_ip.txt  
-
     - name: Save public IP to a file and GitHub Actions environment
       shell: |
         echo "{{ ec2_data.instances[0].public_ip_address }}" > public_ip.txt
