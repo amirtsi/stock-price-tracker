@@ -116,6 +116,11 @@
         content: "{{ ec2_data.instances[0].public_ip_address }}"
         dest: ./public_ip.txt  
 
+    - name: Save public IP to a file and GitHub Actions environment
+      shell: |
+        echo "{{ ec2_data.instances[0].public_ip_address }}" > public_ip.txt
+        echo "EC2_PUBLIC_IP={{ ec2_data.instances[0].public_ip_address }}" >> $GITHUB_ENV
+
     - name: Output public IP
       debug:
         var: ec2_data.instances[0].public_ip_address
