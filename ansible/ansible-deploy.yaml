@@ -116,7 +116,7 @@
     - name: Save public IP to a file
       copy:
         content: "{{ ec2_data.instances[0].public_ip_address }}"
-        dest: /home/ubuntu/public_ip.txt  # Save public IP to a file on the EC2 instance
+        dest: ./public_ip.txt  
 
     - name: Output public IP
       debug:
