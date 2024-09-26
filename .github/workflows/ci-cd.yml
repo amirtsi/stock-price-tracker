@@ -89,7 +89,7 @@ jobs:
           sudo apt-get install -y wget unzip xvfb libxi6 default-jdk
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt install -y ./google-chrome-stable_current_amd64.deb
-          wget https://chromedriver.storage.googleapis.com/129.0.6668.70/chromedriver_linux64.zip || wget https://chromedriver.storage.googleapis.com/latest/chromedriver_linux64.zip # Fallback to latest if 129 isn't available
+          wget https://chromedriver.storage.googleapis.com/129.0.6668.70/chromedriver_linux64.zip || wget https://chromedriver.storage.googleapis.com/latest/chromedriver_linux64.zip 
           unzip chromedriver_linux64.zip
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
