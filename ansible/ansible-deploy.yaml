@@ -183,7 +183,7 @@
 
     - name: Copy Docker Compose file to the server
       copy:
-        src: ./docker-compose.yml
+        src: ../docker-compose.yml
         dest: /home/ubuntu/docker-compose.yml
 
     - name: Run stock-price-tracker with Docker Compose
