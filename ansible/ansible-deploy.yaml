@@ -67,18 +67,16 @@
 
     - name: Create security group
       ec2_group:
-        name: "{{ vpc_name }}-sg"
-        description: "{{ vpc_name }} security group"
+        name: "{{ vpc_name }} VPC SG"
+        description: "{{ vpc_name }} VPC SG"
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ aws_region }}"
+        state: present
         rules:
           - proto: tcp
-            from_port: 80
-            to_port: 80
-            cidr_ip: 0.0.0.0/0
-          - proto: tcp
-            from_port: 22
-            to_port: 22
+            ports:
+              - 80
+              - 22
             cidr_ip: 0.0.0.0/0
       register: sg
 
@@ -136,6 +134,7 @@
         seconds: 30
 
 ##############################################################
+
 - name: Setup Docker and stock-price-tracker with Docker Compose
   hosts: app
   user: ubuntu
@@ -189,4 +188,5 @@
     - name: Run stock-price-tracker with Docker Compose
       ansible.builtin.shell: |
         cd /home/ubuntu
+        docker-compose pull  # Ensure latest image from Docker Hub
         docker-compose up -d
