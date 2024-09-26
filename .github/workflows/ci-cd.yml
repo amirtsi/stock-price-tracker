@@ -1,4 +1,4 @@
-name: Build, Push, and Deploy Stock-Price-Tracker App
+name: Build, Test, Push, and Deploy Stock-Price-Tracker App
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - main
 
 jobs:
+  # Step 1: Build and push Docker image
   build_and_push:
     runs-on: ubuntu-latest
 
@@ -39,9 +40,45 @@ jobs:
       - name: Push Docker image to DockerHub
         run: docker push ${{ secrets.DOCKER_USERNAME }}/stock-price-tracker:latest
 
+  # Step 2: Run Selenium tests (this depends on the build_and_push job)
+  test:
+    runs-on: ubuntu-latest
+    needs: build_and_push  # Wait for the build to complete
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Chrome for Selenium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip xvfb libxi6 libgconf-2-4 default-jdk
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+          wget https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_linux64.zip
+          unzip chromedriver_linux64.zip
+          sudo mv chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
+          google-chrome --version
+          chromedriver --version
+
+      - name: Install Python and Selenium
+        run: |
+          sudo apt-get install -y python3-pip
+          pip3 install selenium
+
+      - name: Run Selenium tests
+        run: |
+          export DISPLAY=:99.0
+          Xvfb :99 -screen 0 1024x768x24 &
+          python3 selenium/test.py
+
+  # Step 3: Deploy the app (this depends on both the build_and_push and test jobs)
   deploy:
     runs-on: ubuntu-latest
-    needs: build_and_push
+    needs: 
+      - build_and_push
+      - test  # Only deploy if both the build and tests are successful
 
     steps:
       - name: Checkout code
