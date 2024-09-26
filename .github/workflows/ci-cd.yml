@@ -111,7 +111,7 @@ jobs:
 
       - name: Run Selenium tests
         run: |
-          pytest selenium/test.py -rA
+          pytest selenium/test_stock_exchange.py -rA
 
       - name: Clean up Docker container
         run: docker stop app && docker rm app
