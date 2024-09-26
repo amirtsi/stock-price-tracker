@@ -1,5 +1,5 @@
 ---
-- name: Create a nginx server with stock-price-tracker
+- name: Provision stock-price-tracker environment on AWS
   hosts: localhost
   connection: local
   gather_facts: False
@@ -14,12 +14,11 @@
     aws_ubuntu_ami: "ami-04cdc91e49cb06165"
     server_type: "t3.medium"
     server_name: "stockpricetracker"
-    docker_image: "linoyk/stock-price-tracker"
     ansible_ssh_private_key_file: "~/.ssh/amir_niv_pk.pem"
     server_volume_size: 20
 
   tasks:
-    - name: create VPC
+    - name: Create VPC
       amazon.aws.ec2_vpc_net:
         name: "{{ vpc_name }}"
         cidr_block: "{{ network }}"
@@ -31,7 +30,7 @@
           Name: "{{ vpc_name }}"
       register: vpc
 
-    - name: associate subnet to the VPC
+    - name: Associate subnet to the VPC
       amazon.aws.ec2_vpc_subnet:
         state: present
         vpc_id: "{{ vpc.vpc.id }}"
@@ -44,7 +43,7 @@
         wait: yes
       register: subnet
 
-    - name: create IGW
+    - name: Create IGW
       amazon.aws.ec2_vpc_igw:
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ aws_region }}"
@@ -67,17 +66,19 @@
           Name: "{{ vpc_name }}_public_rt"
 
     - name: Create security group
-      ec2_group:
-        name: "{{ vpc_name }} VPC SG"
-        description: "{{ vpc_name }} VPC SG"
+      amazon.aws.ec2_security_group:
+        name: "{{ vpc_name }}-sg"
+        description: "{{ vpc_name }} security group"
         vpc_id: "{{ vpc.vpc.id }}"
         region: "{{ aws_region }}"
-        state: present
         rules:
           - proto: tcp
-            ports:
-            - 80
-            - 22
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 22
+            to_port: 22
             cidr_ip: 0.0.0.0/0
       register: sg
 
@@ -105,14 +106,15 @@
         state: running
       register: server_ec2
 
-    - name: get IP of instance
+    - name: Get IP of instance
       amazon.aws.ec2_instance_info:
         filters:
           "tag:Name": "{{ server_name }}"
-          instance-state-name: [ "running"]
+          instance-state-name: [ "running" ]
       register: ec2_data
 
-    - debug: var=ec2_data.instances[0].public_ip_address
+    - debug:
+        var: ec2_data.instances[0].public_ip_address
 
     - name: Add server public IP to application host group
       add_host: hostname={{ ec2_data.instances[0].public_ip_address }} groups=app
@@ -128,19 +130,30 @@
         seconds: 30
 
 ##############################################################
-- name: Setup app server
+- name: Setup Docker and stock-price-tracker with Docker Compose
   hosts: app
   user: ubuntu
   become: True
   gather_facts: False
   vars:
     docker_image: "linoyk/stock-price-tracker"
+    docker_compose_version: "v2.12.2"
 
   tasks:
-    - name: add GPG key
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Add Docker GPG key
       ansible.builtin.shell: wget -qO - https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
-    - name: Add Docker Repository
+    - name: Add Docker repository
       apt_repository:
         repo: deb https://download.docker.com/linux/ubuntu jammy stable
         state: present
@@ -151,16 +164,23 @@
           - docker-ce
           - docker-ce-cli
           - containerd.io
-          - docker-buildx-plugin
-          - docker-compose-plugin
         state: latest
         update_cache: true
 
-    - name: Start Docker
-      ansible.builtin.service:
-        name: "docker"
-        enabled: true
-        state: started
+    - name: Install Docker Compose
+      ansible.builtin.shell: |
+        curl -L "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
 
-    - name: Run stock-price-tracker docker
-      shell: "docker run -d -p 80:80 -t --restart always --name stock-price-tracker {{ docker_image }}"
+    - name: Verify Docker Compose version
+      ansible.builtin.shell: docker-compose --version
+
+    - name: Copy Docker Compose file to the server
+      copy:
+        src: ./docker-compose.yml
+        dest: /home/ubuntu/docker-compose.yml
+
+    - name: Run stock-price-tracker with Docker Compose
+      ansible.builtin.shell: |
+        cd /home/ubuntu
+        docker-compose up -d
