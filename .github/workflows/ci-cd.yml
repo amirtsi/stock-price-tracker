@@ -88,6 +88,19 @@ jobs:
       - name: Run Docker container
         run: docker run -d --name app -p 80:3000 stock-price-tracker
 
+      - name: Install Chrome and ChromeDriver for Selenium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip xvfb libxi6 default-jdk
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+          wget https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_linux64.zip
+          unzip chromedriver_linux64.zip
+          sudo mv chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
+          google-chrome --version
+          chromedriver --version
+
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -96,8 +109,9 @@ jobs:
       - name: Install dependencies for tests
         run: pip install requests webdriver-manager selenium pytest
 
-      - name: Run PyTest
-        run: pytest -rA
+      - name: Run Selenium tests
+        run: |
+          pytest selenium/test.py -rA
 
       - name: Clean up Docker container
         run: docker stop app && docker rm app
