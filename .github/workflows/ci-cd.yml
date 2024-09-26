@@ -41,7 +41,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: build_and_push  
+    needs: build_and_push
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,38 +80,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Build Docker image
-        run: docker build --tag stock-price-tracker .
-
-      - name: Run Docker container
-        run: docker run -d --name app -p 80:3000 stock-price-tracker
-
-      - name: Install Chrome and ChromeDriver for Selenium
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip xvfb libxi6 default-jdk
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt install -y ./google-chrome-stable_current_amd64.deb
-          wget https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_linux64.zip
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
-          google-chrome --version
-          chromedriver --version
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.9'
+          python-version: '3.x'
 
-      - name: Install dependencies for tests
-        run: pip install requests webdriver-manager selenium pytest
-
-      - name: Run Selenium tests
+      - name: Install Python dependencies
         run: |
-          pytest selenium/test_stock_exchange.py -rA
+          pip install selenium
 
-      - name: Clean up Docker container
-        run: docker stop app && docker rm app
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install ChromeDriver
+        uses: nanasess/setup-chromedriver@v1
+
+      - name: Run Selenium Tests
+        run: python selenium/test_stock_exchange.py
