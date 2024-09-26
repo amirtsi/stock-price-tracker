@@ -87,11 +87,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip xvfb libxi6 default-jdk
-          # Install a stable version of Chrome (downgrade to 114.x for compatibility)
+          # Install Chrome 114.x for stability
           wget https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_114.0.5735.90-1_amd64.deb
           sudo apt install -y ./google-chrome-stable_114.0.5735.90-1_amd64.deb
           
-          # Install matching ChromeDriver version
+          # Download and install the matching ChromeDriver version
           wget https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_linux64.zip
           unzip chromedriver_linux64.zip
           sudo mv chromedriver /usr/local/bin/
@@ -112,5 +112,6 @@ jobs:
           export DISPLAY=:99.0
           Xvfb :99 -screen 0 1024x768x24 &
           python3 selenium/test.py ${{ env.EC2_PUBLIC_IP }}  # Run the test script using the EC2 public IP
-
-
+  
+  
+  
