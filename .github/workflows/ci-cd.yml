@@ -82,27 +82,27 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+  
       - name: Set up Chrome and Chromedriver for Selenium
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip xvfb libxi6 default-jdk
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt install -y ./google-chrome-stable_current_amd64.deb
-          wget https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_linux64.zip
+          wget https://chromedriver.storage.googleapis.com/129.0.6668.70/chromedriver_linux64.zip # Use matching ChromeDriver version
           unzip chromedriver_linux64.zip
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
           google-chrome --version
           chromedriver --version
-
+  
       - name: Install Python dependencies in a virtual environment
         run: |
           python3 -m venv venv  # Create a virtual environment
           source venv/bin/activate  # Activate the virtual environment
           pip install --upgrade pip
           pip install -r selenium/requirements.txt  # Install dependencies from requirements.txt
-
+  
       - name: Run Selenium tests against EC2-hosted app
         run: |
           source venv/bin/activate  # Activate the virtual environment
