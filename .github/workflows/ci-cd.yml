@@ -47,11 +47,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install dependencies in a virtual environment
         run: |
-          sudo apt-add-repository ppa:ansible/ansible
-          python -m pip install --upgrade pip
+          sudo apt-add-repository ppa:ansible/ansible -y
+          sudo apt-get update
+          sudo apt-get install -y ansible python3-venv python3-pip
+          python3 -m venv ansible-env
+          source ansible-env/bin/activate
+          pip install --upgrade pip
           pip install ansible==6.7.0 requests botocore boto boto3
+      shell: bash
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -68,4 +73,6 @@ jobs:
 
       - name: Run Ansible Playbook to deploy Stock-Price-Tracker
         run: |
+          source ansible-env/bin/activate
           ansible-playbook ansible/ansible-deploy.yaml --ssh-common-args='-o StrictHostKeyChecking=no'
+      shell: bash
