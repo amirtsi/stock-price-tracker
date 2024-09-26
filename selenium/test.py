@@ -11,7 +11,7 @@ from time import sleep
 import os
 
 class StockExchangeTest():
-    def __init__(self, driver: str, application_url: str = "http://127.0.0.1", download_dir: str = '/Users/zoharmurciano') -> None:
+    def __init__(self, driver: str = '/usr/local/bin/chromedriver', application_url: str = "http://127.0.0.1", download_dir: str = '/Users/zoharmurciano') -> None:
         self.driver = driver
         self.application_url = application_url
         se = ChromeService(executable_path=self.driver)
