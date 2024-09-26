@@ -1,8 +1,7 @@
 version: '3.8'
 services:
   react-app:
-    build:
-      context: .
+    image: linoyk/stock-price-tracker:latest  
     ports:
       - "80:80"
     environment:
