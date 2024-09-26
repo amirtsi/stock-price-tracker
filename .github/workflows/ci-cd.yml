@@ -56,7 +56,7 @@ jobs:
           source ansible-env/bin/activate
           pip install --upgrade pip
           pip install ansible==6.7.0 requests botocore boto boto3
-      shell: bash
+        shell: bash
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -75,4 +75,4 @@ jobs:
         run: |
           source ansible-env/bin/activate
           ansible-playbook ansible/ansible-deploy.yaml --ssh-common-args='-o StrictHostKeyChecking=no'
-      shell: bash
+        shell: bash
