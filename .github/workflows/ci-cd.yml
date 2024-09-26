@@ -83,16 +83,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
   
-      - name: Install Chrome and Chromedriver for Selenium (use compatible versions)
+      - name: Install Chrome and compatible ChromeDriver for Selenium
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip xvfb libxi6 default-jdk
-          # Install an older version of Chrome (adjust the version if necessary)
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+          # Install a stable version of Chrome (downgrade to 114.x for compatibility)
+          wget https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_114.0.5735.90-1_amd64.deb
+          sudo apt install -y ./google-chrome-stable_114.0.5735.90-1_amd64.deb
           
-          # Install a compatible version of ChromeDriver
-          wget https://chromedriver.storage.googleapis.com/128.0.5359.22/chromedriver_linux64.zip  
+          # Install matching ChromeDriver version
+          wget https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_linux64.zip
           unzip chromedriver_linux64.zip
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
@@ -104,12 +104,13 @@ jobs:
           python3 -m venv venv  # Create a virtual environment
           source venv/bin/activate  # Activate the virtual environment
           pip install --upgrade pip
-          pip install -r selenium/requirements.txt  
+          pip install -r selenium/requirements.txt  # Install dependencies from requirements.txt
   
       - name: Run Selenium tests against EC2-hosted app
         run: |
           source venv/bin/activate  # Activate the virtual environment
           export DISPLAY=:99.0
           Xvfb :99 -screen 0 1024x768x24 &
-          python3 selenium/test.py ${{ env.EC2_PUBLIC_IP }}  
+          python3 selenium/test.py ${{ env.EC2_PUBLIC_IP }}  # Run the test script using the EC2 public IP
+
 
